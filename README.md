@@ -79,6 +79,56 @@ Environment variables (`.env`):
 | `PORT` | `5000` | Server port |
 | `FLASK_ENV` | — | Set to `development` for debug mode |
 
+## Deployment (PythonAnywhere)
+
+### One-time setup
+
+1. Create a free account at [pythonanywhere.com](https://www.pythonanywhere.com)
+2. Open a **Bash console** from the Dashboard and run:
+   ```bash
+   git clone https://github.com/SSukhvinderSingh/CarbonCoach.git
+   cd CarbonCoach
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+3. Go to **Web → Add a new web app → Manual configuration → Python 3.12**
+4. Set the **Source code** to: `/home/YOUR_USERNAME/CarbonCoach`
+5. Set the **Working directory** to: `/home/YOUR_USERNAME/CarbonCoach`
+6. Set the **Virtualenv** to: `/home/YOUR_USERNAME/CarbonCoach/.venv`
+7. Open the **WSGI configuration file** link and replace its contents with:
+   ```python
+   import sys
+   import os
+   path = os.path.dirname(os.path.abspath(__file__))
+   if path not in sys.path:
+       sys.path.insert(0, path)
+   from app import app as application
+   ```
+8. Go back and click the **Reload** button. Your app is live at `YOUR_USERNAME.pythonanywhere.com`.
+
+### Auto-deploy (GitHub Actions)
+
+The repo includes a workflow that auto-deploys on every `git push` to `main`. To enable it:
+
+1. **Generate an SSH key** (in your terminal, NOT on PA):
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/pa_deploy -C "github-actions"
+   ```
+2. **Add the public key** to PythonAnywhere: go to **Account → SSH keys → Add a new key** and paste `~/.ssh/pa_deploy.pub`
+3. **Add secrets** to GitHub at https://github.com/SSukhvinderSingh/CarbonCoach/settings/secrets/actions:
+   - `PA_USER` — your PythonAnywhere username
+   - `PA_SSH_KEY` — the contents of `~/.ssh/pa_deploy` (the private key)
+
+After that, every push to `main` automatically pulls on PA and reloads the app.
+
+### Environment variables on PA
+
+Set these via **Web → Environment variables** on PythonAnywhere:
+- `GEMINI_API_KEY` — your Google Gemini key (optional)
+- `GEMINI_MODEL` — `gemini-2.0-flash`
+- `GRID_FACTOR_KG_CO2_PER_KWH` — `0.71`
+
 ## Project Structure
 
 ```
