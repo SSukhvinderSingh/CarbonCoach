@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="CarbonCoach — Track and reduce your carbon footprint">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+<title>CarbonCoach</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #2d9c5e;
+    --green-light: #e8f5e9;
+    --bg: #f5f7f6;
+    --surface: #ffffff;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --border: #d1d5db;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --max-w: 760px;
+  }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+    min-height: 100vh;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111827; --surface: #1f2937; --text: #f3f4f6; --text-muted: #9ca3af; --border: #374151; --green-light: #064e3b; --shadow: 0 1px 3px rgba(0,0,0,0.3); }
+  }
+  .container { max-width: var(--max-w); margin: 0 auto; padding: 16px; }
+
+  /* Login screen */
+  .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; text-align: center; }
+  .login-screen h1 { font-size: 2rem; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+  .login-screen .logo-svg { width: 48px; height: 48px; margin-bottom: 12px; color: var(--green); }
+  .login-screen p { color: var(--text-muted); margin-bottom: 24px; max-width: 360px; }
+  .login-form { display: flex; gap: 8px; width: 100%; max-width: 360px; }
+  .login-form input { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 24px; font-size: 1rem; background: var(--surface); color: var(--text); outline: none; }
+  .login-form input:focus { border-color: var(--green); }
+  .login-form button { padding: 12px 24px; background: var(--green); color: #fff; border: none; border-radius: 24px; font-size: 1rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .login-form button:hover { opacity: 0.9; }
+  .login-hidden { display: none !important; }
+
+  /* Profile chips */
+  .profile-section { margin-top: 20px; width: 100%; max-width: 360px; }
+  .profile-section h3 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
+  .profile-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .profile-chip {
+    padding: 8px 18px; border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surface); font-size: 0.9rem; cursor: pointer;
+    color: var(--text); transition: all 0.15s;
+  }
+  .profile-chip:hover { border-color: var(--green); color: var(--green); background: var(--green-light); }
+
+  /* Header */
+  header { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 8px; flex-wrap: wrap; gap: 8px; }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-left h1 { font-size: 1.25rem; font-weight: 700; color: var(--green); }
+  .header-left svg { width: 24px; height: 24px; color: var(--green); }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .guest-badge { font-size: 0.8rem; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 4px 12px; }
+  .icon-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 0.8rem; cursor: pointer; color: var(--text); display: inline-flex; align-items: center; gap: 4px; }
+  .icon-btn:hover { border-color: var(--green); color: var(--green); }
+  .icon-btn.danger:hover { border-color: #dc2626; color: #dc2626; }
+  .icon-btn.active { border-color: var(--green); background: var(--green-light); }
+
+  /* Scrolling banner */
+  .banner {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--green-light); border: 1px solid var(--green);
+    border-radius: var(--radius); padding: 8px 12px; margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .banner-scroll {
+    flex: 1; overflow: hidden; white-space: nowrap;
+    font-size: 0.82rem; color: var(--text);
+  }
+  .banner-scroll-inner {
+    display: inline-block;
+    animation: scrollText 20s linear infinite;
+    padding-right: 60px;
+  }
+  .banner-scroll-inner:hover { animation-play-state: paused; }
+  @keyframes scrollText {
+    0% { transform: translateX(100%); }
+    10% { transform: translateX(0); }
+    90% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+  .banner-close {
+    background: none; border: none; cursor: pointer;
+    font-size: 1rem; color: var(--text-muted); flex-shrink: 0;
+    padding: 2px 4px; line-height: 1;
+  }
+  .banner-close:hover { color: var(--text); }
+
+  /* Dashboard */
+  .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
+  .card .value { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
+  .card .value.green { color: var(--green); }
+  .card .value.amber { color: #d97706; }
+  .card .value.red { color: #dc2626; }
+  .card .meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+  .full { grid-column: 1 / -1; }
+
+  .categories { margin-bottom: 16px; }
+  .categories h2 { font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .bar-label { width: 100px; font-size: 0.8rem; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 20px; background: var(--bg); border-radius: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 10px; background: var(--green); transition: width 0.3s; }
+  .bar-value { width: 60px; text-align: right; font-size: 0.8rem; font-weight: 600; flex-shrink: 0; }
+
+  /* Chat */
+  .chat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .messages { height: 320px; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { padding: 10px 14px; border-radius: 16px; max-width: 85%; font-size: 0.9rem; line-height: 1.5; }
+  .msg.user { background: var(--green); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.assistant { background: var(--bg); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.assistant strong { color: var(--green); }
+  .input-row { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); align-items: center; }
+  .input-row input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 24px; font-size: 0.9rem; background: var(--bg); color: var(--text); outline: none; }
+  .input-row input:focus { border-color: var(--green); }
+  .input-row button { padding: 10px 20px; background: var(--green); color: #fff; border: none; border-radius: 24px; font-size: 0.9rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .input-row button:hover { opacity: 0.9; }
+  .input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .loc-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--border);
+    cursor: pointer; font-size: 1.1rem; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .loc-btn:hover { border-color: var(--green); }
+  .loc-btn.loc-on { background: var(--green-light); border-color: var(--green); }
+  .loc-btn.loc-off { opacity: 0.5; }
+  .loc-status { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+  .loc-status.ready { color: var(--green); }
+  .loc-status.error { color: #dc2626; }
+  .quick-log { display: flex; gap: 6px; padding: 10px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .quick-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg); font-size: 0.75rem; cursor: pointer; color: var(--text); }
+  .quick-btn:hover { border-color: var(--green); color: var(--green); }
+  .empty-state { text-align: center; color: var(--text-muted); padding: 40px 16px; font-size: 0.9rem; }
+
+  /* Swaps */
+  .swaps { margin-top: 16px; }
+  .swaps h2 { font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; }
+  .swap-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .swap-item:last-child { border-bottom: none; }
+  .swap-saving { color: var(--green); font-weight: 600; white-space: nowrap; margin-left: 8px; }
+
+  footer { text-align: center; padding: 24px 0; font-size: 0.75rem; color: var(--text-muted); }
+
+  /* Sidebar toggle */
+  .sidebar-toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 100;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    box-shadow: var(--shadow); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: var(--text);
+  }
+  .sidebar-toggle:hover { border-color: var(--green); color: var(--green); }
+  .sidebar-toggle.open { right: 316px; }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; top: 0; right: 0; width: 300px; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+    transform: translateX(100%); transition: transform 0.3s ease;
+    z-index: 99; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .sidebar-header h2 { font-size: 0.9rem; font-weight: 600; }
+  .sidebar-header .count { font-size: 0.75rem; color: var(--text-muted); }
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  .sidebar-empty { text-align: center; color: var(--text-muted); padding: 40px 16px; font-size: 0.85rem; }
+
+  /* Activity entry in sidebar */
+  .act-entry { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .act-entry:last-child { border-bottom: none; }
+  .act-icon { font-size: 1.1rem; width: 24px; text-align: center; flex-shrink: 0; margin-top: 2px; }
+  .act-body { flex: 1; min-width: 0; }
+  .act-text { font-size: 0.82rem; color: var(--text); line-height: 1.3; }
+  .act-loc { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+  .act-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .act-kg { font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+  .act-kg.green { color: var(--green); }
+  .act-kg.amber { color: #d97706; }
+  .act-kg.red { color: #dc2626; }
+
+  /* Animated blocks */
+  .blocks { display: flex; gap: 2px; }
+  .block {
+    width: 10px; height: 12px; border-radius: 2px;
+    animation: blockPop 0.4s ease both;
+  }
+  .block.fill { background: currentColor; }
+  .block.empty { background: var(--border); opacity: 0.4; }
+  @keyframes blockPop {
+    0% { transform: scaleY(0.3); opacity: 0; }
+    100% { transform: scaleY(1); opacity: 1; }
+  }
+
+  @media (max-width: 640px) {
+    .dashboard { grid-template-columns: 1fr; }
+    .bar-label { width: 80px; font-size: 0.75rem; }
+    .sidebar { width: 100vw; }
+    .sidebar-toggle.open { right: calc(100vw - 56px); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Login Screen -->
+  <div id="loginScreen" class="login-screen">
+    <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/><path d="M12 7v5l3 3"/></svg>
+    <h1>CarbonCoach</h1>
+    <p>Track and reduce your personal carbon footprint. Describe your day and get personalized insights.</p>
+    <div class="login-form">
+      <input type="text" id="guestNameInput" placeholder="Enter your name..." aria-label="Your name" autocomplete="off" maxlength="50">
+      <button id="loginBtn">Start Tracking</button>
+    </div>
+    <div id="profileSection" class="profile-section login-hidden">
+      <h3>Welcome back</h3>
+      <div id="profileChips" class="profile-chips"></div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainApp" class="login-hidden">
+    <!-- Sidebar toggle -->
+    <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle activity log" aria-expanded="false">☰</button>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar" aria-label="Activity log">
+      <div class="sidebar-header">
+        <h2>Today's Log</h2>
+        <span id="actCount" class="count">0 entries</span>
+      </div>
+      <div id="sidebarBody" class="sidebar-body">
+        <div class="sidebar-empty">No activities logged today.<br>Start chatting to see them here!</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <header>
+        <div class="header-left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/><path d="M12 7v5l3 3"/></svg>
+          <h1>CarbonCoach</h1>
+          <span id="guestBadge" class="guest-badge"></span>
+        </div>
+        <div class="header-right">
+          <button id="logoutBtn" class="icon-btn" title="Log out">🚪 Logout</button>
+          <button id="exportBtn" class="icon-btn" title="Download CSV">⬇ CSV</button>
+          <button id="clearBtn" class="icon-btn danger" title="Clear my data">✕ Clear</button>
+        </div>
+      </header>
+
+      <!-- Scrolling banner -->
+      <div id="dismissBanner" class="banner">
+        <div class="banner-scroll">
+          <span class="banner-scroll-inner">📥 Download your tracker data (CSV) to save your progress — click the ⬇ CSV button above</span>
+        </div>
+        <button id="dismissBannerBtn" class="banner-close" aria-label="Dismiss">✕</button>
+      </div>
+
+      <div class="dashboard">
+        <div class="card">
+          <h2>Today's Total</h2>
+          <div id="todayTotal" class="value green">0 <span style="font-size:0.9rem;font-weight:400;color:var(--text-muted)">kg CO₂e</span></div>
+          <div id="benchmarkMeta" class="meta"></div>
+        </div>
+        <div class="card">
+          <h2>Trend</h2>
+          <div id="trendValue" class="value amber">Insufficient Data</div>
+          <div id="trendDetail" class="meta"></div>
+          <div class="meta">7-day window</div>
+        </div>
+      </div>
+
+      <div id="categoriesCard" class="categories card full login-hidden">
+        <h2>Breakdown</h2>
+        <div id="categoriesBody"></div>
+      </div>
+
+      <div class="chat-card">
+        <div class="messages" id="messages" role="log" aria-label="Chat messages">
+          <div class="empty-state">Hi! I'm CarbonCoach. Tell me about your day — what you ate, how you traveled, or energy you used.<br><br>Examples: "I drove 12 km and had chicken for lunch" or "I took the metro and ate vegetarian"</div>
+        </div>
+        <div class="quick-log" role="toolbar" aria-label="Quick log suggestions">
+          <button class="quick-btn" data-message="drove 10 km">🚗 Drove 10 km</button>
+          <button class="quick-btn" data-message="ate chicken for lunch">🍗 Ate chicken</button>
+          <button class="quick-btn" data-message="ran AC for 3 hours">❄️ AC 3 hrs</button>
+          <button class="quick-btn" data-message="took the metro 5 km">🚇 Metro 5 km</button>
+          <button class="quick-btn" data-message="had a vegetarian meal">🥗 Veg meal</button>
+        </div>
+        <div class="input-row">
+          <button id="locBtn" class="loc-btn loc-off" title="Tag location (optional)" aria-label="Toggle location tagging">📍</button>
+          <span id="locStatus" class="loc-status"></span>
+          <input type="text" id="chatInput" placeholder="Describe your day..." aria-label="Chat message" autocomplete="off">
+          <button id="sendBtn">Send</button>
+        </div>
+      </div>
+
+      <div id="swapsCard" class="card full swaps login-hidden">
+        <h2>Suggested Swaps</h2>
+        <div id="swapsBody"></div>
+      </div>
+
+      <footer>CarbonCoach — personal carbon footprint tracker</footer>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CATEGORY_EMOJI = { transport: "🚗", diet: "🍗", energy: "❄️", waste: "🗑️" };
+  const COLS = 8;
+
+  function getKgColor(kg) {
+    if (kg <= 1) return "green";
+    if (kg <= 3) return "amber";
+    return "red";
+  }
+
+  function renderBlocks(kg) {
+    const filled = Math.min(COLS, Math.round((kg / 5) * COLS));
+    let html = '<div class="blocks">';
+    const color = getKgColor(kg);
+    for (let i = 0; i < COLS; i++) {
+      const fill = i < filled ? "fill" : "empty";
+      html += `<div class="block ${fill}" style="color:var(--${color});animation-delay:${i * 0.05}s"></div>`;
+    }
+    return html + "</div>";
+  }
+
+  function formatActivityType(t) {
+    return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  let guestName = "";
+  let useLocation = false;
+  let cachedPosition = null;
+
+  function init() {
+    const saved = localStorage.getItem("carboncoach_guest");
+    if (saved) {
+      guestName = saved;
+      showApp();
+    } else {
+      loadProfiles();
+    }
+  }
+
+  async function loadProfiles() {
+    try {
+      const res = await fetch("/api/sessions");
+      const data = await res.json();
+      const names = data.sessions || [];
+      const section = document.getElementById("profileSection");
+      const chips = document.getElementById("profileChips");
+      if (names.length) {
+        section.classList.remove("login-hidden");
+        chips.innerHTML = names.map(n =>
+          `<button class="profile-chip" data-name="${n.replace(/"/g, "&quot;")}">${n}</button>`
+        ).join("");
+        chips.querySelectorAll(".profile-chip").forEach(el => {
+          el.addEventListener("click", () => selectProfile(el.dataset.name));
+        });
+      }
+    } catch {}
+  }
+
+  function selectProfile(name) {
+    guestName = name;
+    localStorage.setItem("carboncoach_guest", name);
+    showApp();
+  }
+
+  async function handleLogin() {
+    const input = document.getElementById("guestNameInput");
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guest_name: name }),
+    });
+    if (res.ok) {
+      selectProfile(name);
+    }
+  }
+
+  function showApp() {
+    document.getElementById("loginScreen").classList.add("login-hidden");
+    document.getElementById("mainApp").classList.remove("login-hidden");
+    document.getElementById("guestBadge").textContent = guestName;
+    document.title = `CarbonCoach — ${guestName}`;
+
+    const dismissed = localStorage.getItem("carboncoach_banner_dismissed");
+    if (dismissed) {
+      document.getElementById("dismissBanner").classList.add("login-hidden");
+    }
+
+    refreshDashboard();
+    refreshSidebar();
+  }
+
+  function headers() {
+    return { "Content-Type": "application/json", "X-Guest-Name": guestName };
+  }
+
+  async function refreshDashboard() {
+    const res = await fetch("/api/summary", { headers: headers() });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    document.getElementById("todayTotal").innerHTML =
+      `${data.today_total_kg.toFixed(1)} <span style="font-size:0.9rem;font-weight:400;color:var(--text-muted)">kg CO₂e</span>`;
+
+    const bm = data.benchmark || {};
+    const metaEl = document.getElementById("benchmarkMeta");
+    if (bm.vs_india_pct > 0) metaEl.textContent = `${bm.vs_india_pct.toFixed(0)}% above India avg`;
+    else if (bm.vs_india_pct < 0) metaEl.textContent = `${Math.abs(bm.vs_india_pct).toFixed(0)}% below India avg`;
+    else metaEl.textContent = "";
+
+    const trendEl = document.getElementById("trendValue");
+    const trendDetail = document.getElementById("trendDetail");
+    const trend = data.trend || "insufficient_data";
+    if (trend === "insufficient_data") {
+      trendEl.textContent = "Insufficient Data";
+      trendDetail.textContent = "";
+    } else {
+      const arrow = trend === "improving" ? "\u2193" : trend === "worsening" ? "\u2191" : "\u2192";
+      const label = trend.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      trendEl.textContent = arrow + " " + label;
+      const td = data.trend_details;
+      if (td) {
+        trendDetail.textContent = td.first_avg + " \u2192 " + td.second_avg + " kg/day (" + td.days_count + " days)";
+      }
+    }
+    trendEl.className = "value " + (trend === "improving" ? "green" : trend === "worsening" ? "red" : "amber");
+
+    const cats = data.category_totals_kg || {};
+    const catKeys = Object.keys(cats);
+    const catCard = document.getElementById("categoriesCard");
+    const catBody = document.getElementById("categoriesBody");
+    if (catKeys.length) {
+      catCard.classList.remove("login-hidden");
+      const maxVal = Math.max(...Object.values(cats));
+      catBody.innerHTML = catKeys.map(cat =>
+        `<div class="bar-row"><span class="bar-label">${cat.charAt(0).toUpperCase() + cat.slice(1)}</span>` +
+        `<div class="bar-track"><div class="bar-fill" style="width:${(cats[cat] / maxVal * 100).toFixed(0)}%"></div></div>` +
+        `<span class="bar-value">${cats[cat].toFixed(2)}</span></div>`
+      ).join("");
+    } else {
+      catCard.classList.add("login-hidden");
+    }
+
+    const swaps = data.suggested_swaps || [];
+    const swapsCard = document.getElementById("swapsCard");
+    const swapsBody = document.getElementById("swapsBody");
+    if (swaps.length) {
+      swapsCard.classList.remove("login-hidden");
+      swapsBody.innerHTML = swaps.map(s =>
+        `<div class="swap-item"><span>${s.swap}</span><span class="swap-saving">−${s.est_daily_saving_kg.toFixed(1)} kg/day</span></div>`
+      ).join("");
+    } else {
+      swapsCard.classList.add("login-hidden");
+    }
+  }
+
+  async function refreshSidebar() {
+    const res = await fetch("/api/activities", { headers: headers() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const acts = data.activities || [];
+    const body = document.getElementById("sidebarBody");
+    document.getElementById("actCount").textContent = `${acts.length} ${acts.length === 1 ? "entry" : "entries"}`;
+    if (!acts.length) {
+      body.innerHTML = '<div class="sidebar-empty">No activities logged today.<br>Start chatting to see them here!</div>';
+      return;
+    }
+    body.innerHTML = acts.map(a => {
+      const locHtml = (a.latitude != null && a.longitude != null)
+        ? `<div class="act-loc">📍 ${a.latitude.toFixed(4)}, ${a.longitude.toFixed(4)}</div>`
+        : "";
+      return `<div class="act-entry">` +
+        `<span class="act-icon">${CATEGORY_EMOJI[a.category] || "📋"}</span>` +
+        `<div class="act-body">` +
+          `<div class="act-text">${formatActivityType(a.activity_type)} — ${a.quantity} ${a.category === "transport" ? "km" : a.category === "diet" ? "meal(s)" : a.category === "energy" ? "hr(s)" : "kg"}</div>` +
+          locHtml +
+          `<div class="act-meta">` +
+            `<span class="act-kg ${getKgColor(a.co2_kg)}">${a.co2_kg.toFixed(2)} kg</span>` +
+            renderBlocks(a.co2_kg) +
+          `</div>` +
+        `</div>` +
+      `</div>`;
+    }).join("");
+  }
+
+  async function sendMessage(text) {
+    if (!text.trim()) return;
+    addMessage("user", text);
+    document.getElementById("chatInput").value = "";
+    document.getElementById("sendBtn").disabled = true;
+
+    const body = { message: text };
+
+    if (useLocation && cachedPosition) {
+      body.location = cachedPosition;
+    }
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.reply) addMessage("assistant", data.reply);
+      if (data.logged_activities && data.logged_activities[0] && data.logged_activities[0].latitude != null) {
+        const loc = data.logged_activities[0];
+        addMessage("assistant", `📍 Location tagged (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`);
+      }
+      refreshDashboard();
+      refreshSidebar();
+    } catch {
+      addMessage("assistant", "Sorry, something went wrong. Please try again.");
+    } finally {
+      document.getElementById("sendBtn").disabled = false;
+      document.getElementById("chatInput").focus();
+    }
+  }
+
+  function addMessage(role, content) {
+    const el = document.getElementById("messages");
+    const empty = el.querySelector(".empty-state");
+    if (empty) empty.remove();
+    const div = document.createElement("div");
+    div.className = "msg " + role;
+    div.textContent = content;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // Event listeners
+  document.getElementById("loginBtn").addEventListener("click", handleLogin);
+  document.getElementById("guestNameInput").addEventListener("keydown", e => { if (e.key === "Enter") handleLogin(); });
+  document.getElementById("sendBtn").addEventListener("click", () => sendMessage(document.getElementById("chatInput").value));
+  document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(e.target.value); });
+  document.querySelectorAll(".quick-btn").forEach(btn => btn.addEventListener("click", () => sendMessage(btn.dataset.message)));
+
+  // Location toggle
+  const locBtn = document.getElementById("locBtn");
+  const locStatus = document.getElementById("locStatus");
+
+  async function requestPosition() {
+    locStatus.textContent = "📍 Requesting...";
+    locStatus.className = "loc-status";
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, enableHighAccuracy: false });
+      });
+      cachedPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      locStatus.textContent = `📍 Ready (${cachedPosition.lat.toFixed(4)}, ${cachedPosition.lng.toFixed(4)})`;
+      locStatus.className = "loc-status ready";
+    } catch {
+      cachedPosition = null;
+      locStatus.textContent = "📍 Unavailable — check browser location settings";
+      locStatus.className = "loc-status error";
+      useLocation = false;
+      locBtn.className = "loc-btn loc-off";
+    }
+  }
+
+  locBtn.addEventListener("click", () => {
+    useLocation = !useLocation;
+    if (useLocation) {
+      locBtn.className = "loc-btn loc-on";
+      requestPosition();
+    } else {
+      locBtn.className = "loc-btn loc-off";
+      locStatus.textContent = "";
+      locStatus.className = "loc-status";
+      cachedPosition = null;
+    }
+  });
+
+  // Sidebar toggle
+  const sidebar = document.getElementById("sidebar");
+  const toggleBtn = document.getElementById("sidebarToggle");
+  toggleBtn.addEventListener("click", () => {
+    const open = sidebar.classList.toggle("open");
+    toggleBtn.classList.toggle("open");
+    toggleBtn.setAttribute("aria-expanded", open);
+    toggleBtn.textContent = open ? "✕" : "☰";
+  });
+
+  // Logout
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.removeItem("carboncoach_guest");
+    location.reload();
+  });
+
+  // CSV export
+  document.getElementById("exportBtn").addEventListener("click", async () => {
+    const res = await fetch("/api/export", { headers: headers() });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `carboncoach_${guestName}.csv`;
+    document.body.appendChild(a); a.click();
+    a.remove(); URL.revokeObjectURL(url);
+  });
+
+  // Clear data
+  document.getElementById("clearBtn").addEventListener("click", async () => {
+    if (!confirm("Clear all your logged data? This cannot be undone.")) return;
+    await fetch("/api/clear", { method: "POST", headers: headers() });
+    localStorage.removeItem("carboncoach_guest");
+    location.reload();
+  });
+
+  // Dismiss banner
+  document.getElementById("dismissBannerBtn").addEventListener("click", () => {
+    document.getElementById("dismissBanner").classList.add("login-hidden");
+    localStorage.setItem("carboncoach_banner_dismissed", "1");
+  });
+
+  init();
+</script>
+</body>
+</html>
