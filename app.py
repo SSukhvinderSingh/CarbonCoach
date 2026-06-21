@@ -41,10 +41,10 @@ def _get_window_activities(guest):
     return get_activities_since(guest, window_start)
 
 
-def _compute_grounding(guest):
+def _compute_grounding(guest, trend_mode="7day"):
     today_acts = _get_today_activities(guest)
     window_acts = _get_window_activities(guest)
-    rec = recommend(window_acts, today_acts)
+    rec = recommend(window_acts, today_acts, trend_mode=trend_mode)
     bench = benchmark(rec["today_total_kg"])
     return {**rec, "benchmark": bench}
 
@@ -127,7 +127,8 @@ def chat():
 @app.route("/api/summary", methods=["GET"])
 def summary():
     guest = _get_guest()
-    grounding = _compute_grounding(guest)
+    trend_mode = request.args.get("trend_mode", "7day")
+    grounding = _compute_grounding(guest, trend_mode=trend_mode)
     return jsonify(grounding)
 
 

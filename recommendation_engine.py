@@ -108,7 +108,54 @@ def _classify_trend(activities_window):
     }
 
 
-def recommend(activities_window, today_activities):
+def _classify_daily_trend(today_activities):
+    if not today_activities or len(today_activities) < 2:
+        return {"trend": "insufficient_data", "trend_details": None}
+
+    has_time = all("logged_at" in a and a["logged_at"] for a in today_activities)
+    if not has_time:
+        return {"trend": "insufficient_data", "trend_details": None}
+
+    try:
+        from datetime import datetime
+        sorted_acts = sorted(today_activities, key=lambda a: a["logged_at"])
+        dt0 = datetime.fromisoformat(sorted_acts[0]["logged_at"])
+        dtN = datetime.fromisoformat(sorted_acts[-1]["logged_at"])
+        mid_point = dt0 + (dtN - dt0) / 2
+        first_half = [a for a in sorted_acts if datetime.fromisoformat(a["logged_at"]) < mid_point]
+        second_half = [a for a in sorted_acts if datetime.fromisoformat(a["logged_at"]) >= mid_point]
+    except (ValueError, TypeError):
+        return {"trend": "insufficient_data", "trend_details": None}
+
+    if not first_half or not second_half:
+        return {"trend": "insufficient_data", "trend_details": None}
+
+    first_avg = sum(a["co2_kg"] for a in first_half) / len(first_half)
+    second_avg = sum(a["co2_kg"] for a in second_half) / len(second_half)
+
+    if first_avg == 0:
+        return {"trend": "insufficient_data", "trend_details": None}
+
+    change_pct = ((second_avg - first_avg) / first_avg) * 100
+
+    if change_pct <= -5:
+        trend = "improving"
+    elif change_pct >= 5:
+        trend = "worsening"
+    else:
+        trend = "steady"
+
+    return {
+        "trend": trend,
+        "trend_details": {
+            "first_avg": round(first_avg, 2),
+            "second_avg": round(second_avg, 2),
+            "entries_count": len(sorted_acts),
+        },
+    }
+
+
+def recommend(activities_window, today_activities, trend_mode="7day"):
     all_activities = activities_window + today_activities
 
     category_totals_kg = {}
@@ -127,7 +174,10 @@ def recommend(activities_window, today_activities):
         top_category = max(category_totals_kg, key=category_totals_kg.get)
         top_category_label = CATEGORY_LABELS.get(top_category, top_category)
 
-    trend_result = _classify_trend(activities_window)
+    if trend_mode == "daily":
+        trend_result = _classify_daily_trend(today_activities)
+    else:
+        trend_result = _classify_trend(activities_window)
     trend = trend_result["trend"]
     trend_details = trend_result["trend_details"]
 
@@ -142,5 +192,6 @@ def recommend(activities_window, today_activities):
         "today_total_kg": today_total_kg,
         "trend": trend,
         "trend_details": trend_details,
+        "trend_mode": trend_mode,
         "suggested_swaps": suggested_swaps,
     }

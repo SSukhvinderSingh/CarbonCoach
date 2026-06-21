@@ -68,6 +68,9 @@
   .icon-btn:hover { border-color: var(--green); color: var(--green); }
   .icon-btn.danger:hover { border-color: #dc2626; color: #dc2626; }
   .icon-btn.active { border-color: var(--green); background: var(--green-light); }
+  .trend-toggle { display: flex; gap: 4px; margin-top: 8px; justify-content: center; }
+  .toggle-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 0.75rem; background: var(--surface); color: var(--text-muted); cursor: pointer; }
+  .toggle-btn.active { border-color: var(--green); background: var(--green-light); color: var(--green); font-weight: 600; }
 
   /* Scrolling banner */
   .banner {
@@ -284,7 +287,10 @@
           <h2>Trend</h2>
           <div id="trendValue" class="value amber">Insufficient Data</div>
           <div id="trendDetail" class="meta"></div>
-          <div class="meta">7-day window</div>
+          <div class="trend-toggle">
+            <button id="trendDailyBtn" class="toggle-btn" data-mode="daily">Day</button>
+            <button id="trendWeeklyBtn" class="toggle-btn active" data-mode="7day">7-Day</button>
+          </div>
         </div>
       </div>
 
@@ -350,6 +356,7 @@
   let guestName = "";
   let useLocation = false;
   let cachedPosition = null;
+  let trendMode = "7day";
 
   function init() {
     const saved = localStorage.getItem("carboncoach_guest");
@@ -420,7 +427,7 @@
   }
 
   async function refreshDashboard() {
-    const res = await fetch("/api/summary", { headers: headers() });
+    const res = await fetch("/api/summary?trend_mode=" + trendMode, { headers: headers() });
     if (!res.ok) return;
     const data = await res.json();
 
@@ -445,7 +452,9 @@
       trendEl.textContent = arrow + " " + label;
       const td = data.trend_details;
       if (td) {
-        trendDetail.textContent = td.first_avg + " \u2192 " + td.second_avg + " kg/day (" + td.days_count + " days)";
+        const unit = trendMode === "daily" ? "kg/entry" : "kg/day";
+        const countLabel = trendMode === "daily" ? td.entries_count + " entries" : td.days_count + " days";
+        trendDetail.textContent = td.first_avg + " \u2192 " + td.second_avg + " " + unit + " (" + countLabel + ")";
       }
     }
     trendEl.className = "value " + (trend === "improving" ? "green" : trend === "worsening" ? "red" : "amber");
@@ -629,6 +638,20 @@
     await fetch("/api/clear", { method: "POST", headers: headers() });
     localStorage.removeItem("carboncoach_guest");
     location.reload();
+  });
+
+  // Trend toggle
+  document.getElementById("trendDailyBtn").addEventListener("click", () => {
+    trendMode = "daily";
+    document.getElementById("trendDailyBtn").classList.add("active");
+    document.getElementById("trendWeeklyBtn").classList.remove("active");
+    refreshDashboard();
+  });
+  document.getElementById("trendWeeklyBtn").addEventListener("click", () => {
+    trendMode = "7day";
+    document.getElementById("trendWeeklyBtn").classList.add("active");
+    document.getElementById("trendDailyBtn").classList.remove("active");
+    refreshDashboard();
   });
 
   // Dismiss banner
